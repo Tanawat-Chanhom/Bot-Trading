@@ -41,15 +41,6 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 var socketManager_1 = __importDefault(require("./services/socketManager"));
 var bitkubManage_1 = __importDefault(require("./services/bitkubManage"));
-// Version 1: Variable
-// const cryptoName: string = "usdt";
-// const zoneLangth: number = 20;
-// let centerLine: number = 18;
-// const zoneSpace: number = 0.03;
-// let zone: Array<any> = [];
-// let wallet: number = 1000000;
-// const capitalMoney = 1000000;
-// const buyAmount: number = 1000;
 /*
  **
  ** Version 2: Variable
@@ -61,11 +52,12 @@ var currentPrice = -1;
 var timeInterval = 1000;
 var historyOrder = [];
 var floatDecimalNumberFixed = 2;
+var buyPerZone = 10; //THB
 // Zone Setting
 var zones = [];
-var maxZone = 0;
-var minZone = 0;
-var amountZone = 20;
+var maxZone = 31.6;
+var minZone = 31.2;
+var amountZone = 3;
 // New Version ----------------------------------------------------
 function init() {
     return __awaiter(this, void 0, void 0, function () {
@@ -74,7 +66,7 @@ function init() {
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
-                    _a.trys.push([0, 4, , 5]);
+                    _a.trys.push([0, 6, , 7]);
                     socket = socketManager_1.default.getInstance(cryptoName);
                     socket.on("message", function (res) {
                         var data = JSON.parse(res.utf8Data.split("\n")[0]);
@@ -89,47 +81,37 @@ function init() {
                     zones = generateZone(res.high24hr, res.low24hr, amountZone);
                     _a.label = 3;
                 case 3:
+                    console.log(zones);
+                    return [4 /*yield*/, bitkubManage_1.default.getInstance().getPrice(cryptoName)];
+                case 4: return [4 /*yield*/, (_a.sent()).last];
+                case 5:
+                    currentPrice = _a.sent();
                     setInterval(function () { return __awaiter(_this, void 0, void 0, function () {
+                        var result;
                         return __generator(this, function (_a) {
-                            console.clear();
-                            console.log(rounding++);
-                            if (currentPrice !== -1) {
-                                console.log(currentPrice);
-                                // const { result } = await BitkubManager.getInstance().getMyOrder(
-                                //   cryptoName
-                                // );
-                                // historyOrder = result;
-                                zones.map(function (zone, index) {
-                                    console.log(zone, zone.startAt + (zone.endAt - zone.startAt) * 0.3);
-                                    if (currentPrice >= zone.startAt && currentPrice <= zone.endAt) {
-                                        if (currentPrice >= zone.startAt &&
-                                            currentPrice <=
-                                                zone.startAt + (zone.endAt - zone.startAt) * 0.3 &&
-                                            zone.isBuy === false) {
-                                            var dataZone = zones[index];
-                                            dataZone.isBuy = true;
-                                            dataZone.value = 100;
-                                            zones[index] = dataZone;
-                                        }
-                                        if (currentPrice >= zone.endAt && zone.isBuy === true) {
-                                            //Sell
-                                            var dataZone = zones[index];
-                                            dataZone.isBuy = false;
-                                            dataZone.value = 0;
-                                            zones[index] = dataZone;
-                                        }
-                                    }
-                                });
+                            switch (_a.label) {
+                                case 0:
+                                    // console.clear();
+                                    console.log(currentPrice);
+                                    return [4 /*yield*/, bitkubManage_1.default.getInstance().getMyOrder(cryptoName)];
+                                case 1:
+                                    result = (_a.sent()).result;
+                                    historyOrder = result;
+                                    // -----------------------------------------------------------------
+                                    zones.map(function (zone, index) {
+                                        buy(zone);
+                                        sell(zone);
+                                    });
+                                    return [2 /*return*/];
                             }
-                            return [2 /*return*/];
                         });
                     }); }, timeInterval);
-                    return [3 /*break*/, 5];
-                case 4:
+                    return [3 /*break*/, 7];
+                case 6:
                     error_1 = _a.sent();
                     console.error(error_1);
-                    return [3 /*break*/, 5];
-                case 5: return [2 /*return*/];
+                    return [3 /*break*/, 7];
+                case 7: return [2 /*return*/];
             }
         });
     });
@@ -144,6 +126,8 @@ function generateZone(maxZone, minZone, amountZone) {
             endAt: fixedNumber(minZone + lengthPerZone),
             isBuy: false,
             value: 0,
+            inOrder: false,
+            order: {},
         },
     ];
     var test = minZone;
@@ -156,114 +140,53 @@ function generateZone(maxZone, minZone, amountZone) {
             endAt: fixedNumber(endAt),
             isBuy: false,
             value: 0,
+            inOrder: false,
+            order: {},
         });
         test = test + lengthPerZone;
     }
     return zone;
+}
+function buy(zone) {
+    return __awaiter(this, void 0, void 0, function () {
+        var wallet, newZoneData;
+        return __generator(this, function (_a) {
+            switch (_a.label) {
+                case 0: return [4 /*yield*/, bitkubManage_1.default.getInstance().wallets("THB")];
+                case 1:
+                    wallet = _a.sent();
+                    if (wallet > 10) {
+                        // if (
+                        //   currentPrice >= zone.startAt &&
+                        //   currentPrice <= zone.startAt + (zone.endAt - zone.startAt) * 0.3 &&
+                        //   zone.isBuy === false
+                        // ) {
+                        //   console.log(`Zone Index: ${zone.zoneNumber} is Buy`);
+                        // }
+                        if (zone.isBuy === false && currentPrice >= zone.startAt) {
+                            console.log("Zone Index: " + zone.zoneNumber + " is Buy, at rat: " + zone.startAt);
+                            newZoneData = zone;
+                            newZoneData.isBuy = true;
+                            zones[zone.zoneNumber] = newZoneData;
+                        }
+                    }
+                    return [2 /*return*/];
+            }
+        });
+    });
+}
+function sell(zone) {
+    return __awaiter(this, void 0, void 0, function () {
+        return __generator(this, function (_a) {
+            if (currentPrice >= zone.endAt && zone.isBuy === true) {
+                console.log("Zone Index: " + zone.zoneNumber + " is Sell");
+            }
+            return [2 /*return*/];
+        });
+    });
 }
 function fixedNumber(number) {
     var newNumber = parseFloat(number.toFixed(floatDecimalNumberFixed));
     return newNumber;
 }
 init();
-// Old Version ----------------------------------------------------
-// function inState(message: any): any {
-//   console.clear();
-//   let json = JSON.parse(message.utf8Data.split("\n")[0]);
-//   const rat: number = json.rat;
-//   zone = zone.map((zoneObject) => {
-//     let zone = zoneObject;
-//     if (rat >= zoneObject.zoneValue + zoneSpace) {
-//       if (zoneObject.coin > 0 && zone.isBuy == true) {
-//         zone.status = "Sell";
-//         zone.isBuy = false;
-//         sell(zoneObject.coin, rat);
-//       }
-//     } else if (
-//       rat >= zoneObject.zoneValue &&
-//       rat < zoneObject.zoneValue + zoneSpace
-//     ) {
-//       if (zone.isBuy !== true) {
-//         zone.status = "Buy";
-//         zone.isBuy = true;
-//         zone.coin = buy(buyAmount, rat);
-//       }
-//     }
-//     return { ...zone };
-//   });
-//   console.log(`Received: ${rat} THB / ${cryptoName.toUpperCase()}`);
-//   console.log(`Money: ${wallet} THB`);
-//   console.log(`Cash Flow: ${wallet - capitalMoney} THB`);
-//   genGraph(rat);
-// }
-// function genGraph(currentPrice: number): any {
-//   zone.map((zoneObject) => {
-//     const formatedNumber: string = zoneObject.zoneValue
-//       .toString()
-//       .padStart(10, " ")
-//       .padEnd(15, " ");
-//     if (zoneObject.zoneValue === currentPrice) {
-//       console.log(
-//         "\x1b[43m%s\x1b[0m",
-//         `${formatedNumber}`,
-//         zoneObject.check(zoneObject)
-//       );
-//     } else if (zoneObject.zoneValue >= currentPrice) {
-//       console.log(
-//         "\x1b[41m%s\x1b[0m",
-//         `${formatedNumber}`,
-//         zoneObject.check(zoneObject)
-//       );
-//     } else {
-//       console.log(
-//         "\x1b[44m%s\x1b[0m",
-//         `${formatedNumber}`,
-//         zoneObject.check(zoneObject)
-//       );
-//     }
-//   });
-// }
-// function genZone(): Array<any> {
-//   const upSpaceZone: Array<any> = [];
-//   const downSpaceZone: Array<any> = [];
-//   let test: number = centerLine;
-//   for (let index = 0; index < zoneLangth; index++) {
-//     const numberSpace: any = test + zoneSpace;
-//     upSpaceZone.push(parseFloat(Number.parseFloat(numberSpace).toFixed(3)));
-//     test = parseFloat(Number.parseFloat(numberSpace).toFixed(3));
-//   }
-//   let test2: number = centerLine;
-//   for (let index = 0; index < zoneLangth; index++) {
-//     const numberSpace: any = test2 - zoneSpace;
-//     downSpaceZone.push(parseFloat(Number.parseFloat(numberSpace).toFixed(3)));
-//     test2 = parseFloat(Number.parseFloat(numberSpace).toFixed(3));
-//   }
-//   downSpaceZone.push(centerLine);
-//   let test3: Array<any> = upSpaceZone
-//     .concat(downSpaceZone)
-//     .sort((a: any, b: any) => a - b)
-//     .reverse();
-//   let objectZone: Array<object> = test3.map((value) => {
-//     return {
-//       zoneValue: value,
-//       isBuy: false,
-//       coin: 0,
-//       status: "",
-//       check: checkItSelf,
-//     };
-//   });
-//   return objectZone;
-// }
-// const checkItSelf = (zoneObject: any): any => {
-//   return zoneObject.status;
-// };
-// function buy(money: number, rat: number): any {
-//   let coin: number = money / rat;
-//   wallet = wallet - money;
-//   return coin;
-// }
-// function sell(coin: number, rat: number): any {
-//   let money: number = coin * rat;
-//   wallet = wallet + money;
-//   return money;
-// }

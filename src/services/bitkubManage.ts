@@ -1,9 +1,9 @@
 import axios from "axios";
 import crypto from "crypto";
 
-var API_KEY = "316f12589c0b5d279c0447bbb08be7f1";
-var API_SECRET = "dc5de89c44bf24f7683e84ec858646d5";
-var API_HOST = "https://api.bitkub.com";
+var API_KEY: string = "316f12589c0b5d279c0447bbb08be7f1";
+var API_SECRET: string = "dc5de89c44bf24f7683e84ec858646d5";
+var API_HOST: string = "https://api.bitkub.com";
 
 type orderType = "limit" | "market";
 
@@ -69,9 +69,9 @@ class BitkubManager {
   /**
    * Get crypto price by crypto name.
    */
-  public async getPrice(name: string): Promise<cryptoInfo> {
+  public async getPrice(cryptoName: string): Promise<cryptoInfo> {
     let { data } = await axios.get(this.API_HOST + "/api/market/ticker");
-    return data[name];
+    return data[cryptoName];
   }
 
   /**
@@ -91,6 +91,22 @@ class BitkubManager {
       { headers: this.HEADER }
     );
     return res.data;
+    // [
+    //   {
+    //     id: 8739399,
+    //     hash: 'fwQ6dnQWQQYbeVVNQM2UmELkB2p',
+    //     side: 'BUY',
+    //     type: 'limit',
+    //     rate: '31.40',
+    //     fee: '0.03',
+    //     credit: '0.03',
+    //     amount: '9.74',
+    //     receive: '0.31000000',
+    //     parent_id: 0,
+    //     super_id: 0,
+    //     ts: 1624112468
+    //   }
+    // ]
   }
 
   /**
@@ -116,11 +132,12 @@ class BitkubManager {
 
   /**
    * createBuy
+   *
    */
   public async createBuy(
     name: string,
-    amoust: number,
-    rate: number,
+    amoust: number, // THB
+    rate: number, // THB/Crypto
     orderType: orderType
   ): Promise<any> {
     let body: any = {
@@ -138,11 +155,25 @@ class BitkubManager {
       headers: this.HEADER,
     });
     return res.data;
+    // {
+    //   error: 0,
+    //   result: {
+    //     id: 8739363,
+    //     hash: 'fwQ6dnQWQQYbeVVNQM2TFuZKibJ',
+    //     typ: 'limit',
+    //     amt: 9.74,
+    //     rat: 31.4,
+    //     fee: 0.03,
+    //     cre: 0.03,
+    //     rec: 0.31,
+    //     ts: 1624112134
+    //   }
+    // }
   }
 
   public async createSell(
     name: string,
-    amoust: number,
+    amoust: number, //Crypto
     rate: number,
     orderType: orderType
   ): Promise<any> {
@@ -161,6 +192,20 @@ class BitkubManager {
       headers: this.HEADER,
     });
     return res.data;
+    // {
+    //   error: 0,
+    //   result: {
+    //     id: 48570614,
+    //     hash: 'fwQ6dnQZwudSk1BTNj8K3eiM4jD',
+    //     typ: 'limit',
+    //     amt: 0.002,
+    //     rat: 100000,
+    //     fee: 0.5,
+    //     cre: 0.5,
+    //     rec: 200,
+    //     ts: 1624112869
+    //   }
+    // }
   }
 }
 

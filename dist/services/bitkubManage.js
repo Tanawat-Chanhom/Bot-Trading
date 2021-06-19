@@ -89,7 +89,7 @@ var BitkubManager = /** @class */ (function () {
     /**
      * Get crypto price by crypto name.
      */
-    BitkubManager.prototype.getPrice = function (name) {
+    BitkubManager.prototype.getPrice = function (cryptoName) {
         return __awaiter(this, void 0, void 0, function () {
             var data;
             return __generator(this, function (_a) {
@@ -97,7 +97,7 @@ var BitkubManager = /** @class */ (function () {
                     case 0: return [4 /*yield*/, axios_1.default.get(this.API_HOST + "/api/market/ticker")];
                     case 1:
                         data = (_a.sent()).data;
-                        return [2 /*return*/, data[name]];
+                        return [2 /*return*/, data[cryptoName]];
                 }
             });
         });
@@ -159,8 +159,11 @@ var BitkubManager = /** @class */ (function () {
     };
     /**
      * createBuy
+     *
      */
-    BitkubManager.prototype.createBuy = function (name, amoust, rate, orderType) {
+    BitkubManager.prototype.createBuy = function (name, amoust, // THB
+    rate, // THB/Crypto
+    orderType) {
         return __awaiter(this, void 0, void 0, function () {
             var body, signature, res;
             var _a;
@@ -189,7 +192,8 @@ var BitkubManager = /** @class */ (function () {
             });
         });
     };
-    BitkubManager.prototype.createSell = function (name, amoust, rate, orderType) {
+    BitkubManager.prototype.createSell = function (name, amoust, //Crypto
+    rate, orderType) {
         return __awaiter(this, void 0, void 0, function () {
             var body, signature, res;
             var _a;
