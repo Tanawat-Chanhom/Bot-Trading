@@ -49,10 +49,11 @@ var bitkubManage_1 = __importDefault(require("./services/bitkubManage"));
 var rounding = 0;
 var cryptoName = "THB_USDT";
 var currentPrice = -1;
-var timeInterval = 1000;
+var timeInterval = 5000;
 var historyOrder = [];
 var floatDecimalNumberFixed = 2;
 var buyPerZone = 10; //THB
+var isErrorSomewhere = false;
 // Zone Setting
 var zones = [];
 var maxZone = 31.6;
@@ -61,39 +62,84 @@ var amountZone = 3;
 // New Version ----------------------------------------------------
 function init() {
     return __awaiter(this, void 0, void 0, function () {
-        var socket, res, error_1;
+        var error_1;
         var _this = this;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
-                    _a.trys.push([0, 6, , 7]);
-                    socket = socketManager_1.default.getInstance(cryptoName);
-                    socket.on("message", function (res) {
-                        var data = JSON.parse(res.utf8Data.split("\n")[0]);
-                        currentPrice = data.rat;
-                    });
-                    if (!(maxZone !== 0 && minZone !== 0)) return [3 /*break*/, 1];
-                    zones = generateZone(maxZone, minZone, amountZone);
-                    return [3 /*break*/, 3];
-                case 1: return [4 /*yield*/, bitkubManage_1.default.getInstance().getPrice(cryptoName)];
+                    _a.trys.push([0, 4, , 5]);
+                    return [4 /*yield*/, (function () { return __awaiter(_this, void 0, void 0, function () {
+                            var socket;
+                            return __generator(this, function (_a) {
+                                socket = socketManager_1.default.getInstance(cryptoName);
+                                socket.on("message", function (res) {
+                                    var data = JSON.parse(res.utf8Data.split("\n")[0]);
+                                    currentPrice = data.rat;
+                                });
+                                return [2 /*return*/];
+                            });
+                        }); })()
+                            .then(function () {
+                            console.log("System--> Socket Connected!!");
+                        })
+                            .catch(function (error) {
+                            log(error, "error");
+                        })];
+                case 1:
+                    _a.sent();
+                    return [4 /*yield*/, (function () { return __awaiter(_this, void 0, void 0, function () {
+                            var res;
+                            return __generator(this, function (_a) {
+                                switch (_a.label) {
+                                    case 0:
+                                        if (!(maxZone !== 0 && minZone !== 0)) return [3 /*break*/, 1];
+                                        zones = generateZone(maxZone, minZone, amountZone);
+                                        return [3 /*break*/, 3];
+                                    case 1: return [4 /*yield*/, bitkubManage_1.default.getInstance().getPrice(cryptoName)];
+                                    case 2:
+                                        res = _a.sent();
+                                        zones = generateZone(res.high24hr, res.low24hr, amountZone);
+                                        _a.label = 3;
+                                    case 3: return [2 /*return*/];
+                                }
+                            });
+                        }); })()
+                            .then(function () {
+                            log("Generate Zone Successfully", "system");
+                        })
+                            .catch(function (error) {
+                            log(error, "error");
+                        })];
                 case 2:
-                    res = _a.sent();
-                    zones = generateZone(res.high24hr, res.low24hr, amountZone);
-                    _a.label = 3;
+                    _a.sent();
+                    return [4 /*yield*/, (function () { return __awaiter(_this, void 0, void 0, function () {
+                            return __generator(this, function (_a) {
+                                switch (_a.label) {
+                                    case 0: return [4 /*yield*/, bitkubManage_1.default.getInstance().getPrice(cryptoName)];
+                                    case 1: return [4 /*yield*/, (_a.sent()).last];
+                                    case 2:
+                                        currentPrice = _a.sent();
+                                        return [2 /*return*/];
+                                }
+                            });
+                        }); })()
+                            .then(function () {
+                            log("Get CurrentPrice Successfully", "system");
+                        })
+                            .catch(function (error) {
+                            log(error, "error");
+                        })];
                 case 3:
-                    console.log(zones);
-                    return [4 /*yield*/, bitkubManage_1.default.getInstance().getPrice(cryptoName)];
-                case 4: return [4 /*yield*/, (_a.sent()).last];
-                case 5:
-                    currentPrice = _a.sent();
+                    _a.sent();
+                    if (isErrorSomewhere) {
+                        log("Error", "common");
+                        return [2 /*return*/];
+                    }
                     setInterval(function () { return __awaiter(_this, void 0, void 0, function () {
                         var result;
                         return __generator(this, function (_a) {
                             switch (_a.label) {
-                                case 0:
-                                    // console.clear();
-                                    console.log(currentPrice);
-                                    return [4 /*yield*/, bitkubManage_1.default.getInstance().getMyOrder(cryptoName)];
+                                case 0: return [4 /*yield*/, bitkubManage_1.default.getInstance().getMyOrder(cryptoName)];
                                 case 1:
                                     result = (_a.sent()).result;
                                     historyOrder = result;
@@ -101,17 +147,18 @@ function init() {
                                     zones.map(function (zone, index) {
                                         buy(zone);
                                         sell(zone);
+                                        checkOrderHistory(zone);
                                     });
                                     return [2 /*return*/];
                             }
                         });
                     }); }, timeInterval);
-                    return [3 /*break*/, 7];
-                case 6:
+                    return [3 /*break*/, 5];
+                case 4:
                     error_1 = _a.sent();
                     console.error(error_1);
-                    return [3 /*break*/, 7];
-                case 7: return [2 /*return*/];
+                    return [3 /*break*/, 5];
+                case 5: return [2 /*return*/];
             }
         });
     });
@@ -149,28 +196,32 @@ function generateZone(maxZone, minZone, amountZone) {
 }
 function buy(zone) {
     return __awaiter(this, void 0, void 0, function () {
-        var wallet, newZoneData;
+        var wallet;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0: return [4 /*yield*/, bitkubManage_1.default.getInstance().wallets("THB")];
                 case 1:
                     wallet = _a.sent();
-                    if (wallet > 10) {
-                        // if (
-                        //   currentPrice >= zone.startAt &&
-                        //   currentPrice <= zone.startAt + (zone.endAt - zone.startAt) * 0.3 &&
-                        //   zone.isBuy === false
-                        // ) {
-                        //   console.log(`Zone Index: ${zone.zoneNumber} is Buy`);
-                        // }
-                        if (zone.isBuy === false && currentPrice >= zone.startAt) {
-                            console.log("Zone Index: " + zone.zoneNumber + " is Buy, at rat: " + zone.startAt);
-                            newZoneData = zone;
-                            newZoneData.isBuy = true;
+                    if (!(wallet > 10)) return [3 /*break*/, 3];
+                    if (!(zone.inOrder === false && currentPrice >= zone.startAt)) return [3 /*break*/, 3];
+                    return [4 /*yield*/, bitkubManage_1.default.getInstance()
+                            .createBuy(cryptoName, buyPerZone, zone.startAt, "limit")
+                            .then(function (_a) {
+                            var result = _a.result;
+                            console.log("Zone Index: " + zone.zoneNumber + ", Order at : " + zone.startAt);
+                            var newZoneData = zone;
+                            newZoneData.inOrder = true;
+                            newZoneData.order = result;
                             zones[zone.zoneNumber] = newZoneData;
-                        }
-                    }
-                    return [2 /*return*/];
+                            console.log(zones[zone.zoneNumber]);
+                        })
+                            .catch(function (error) {
+                            log(error, "error");
+                        })];
+                case 2:
+                    _a.sent();
+                    _a.label = 3;
+                case 3: return [2 /*return*/];
             }
         });
     });
@@ -185,8 +236,34 @@ function sell(zone) {
         });
     });
 }
+function checkOrderHistory(zone) {
+    return __awaiter(this, void 0, void 0, function () {
+        return __generator(this, function (_a) {
+            if (zone.order && zone.inOrder === true) {
+                console.log("Check order at zone: ", zone.zoneNumber, historyOrder.find(function (x) { return x.id === zone.order.id; }));
+            }
+            return [2 /*return*/];
+        });
+    });
+}
 function fixedNumber(number) {
     var newNumber = parseFloat(number.toFixed(floatDecimalNumberFixed));
     return newNumber;
+}
+function log(text, type) {
+    switch (type) {
+        case "system":
+            console.log("System--> " + text);
+            break;
+        case "common":
+            console.log("Common--> " + text);
+            break;
+        case "error":
+            console.log("Error---> " + text);
+            break;
+        default:
+            console.log(text);
+            break;
+    }
 }
 init();

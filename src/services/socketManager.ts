@@ -1,4 +1,3 @@
-import io from "socket.io-client";
 import { client as WebSocketClient } from "websocket";
 
 var HOST_WSS = "wss://api.bitkub.com";
