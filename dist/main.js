@@ -49,16 +49,17 @@ var bitkubManage_1 = __importDefault(require("./services/bitkubManage"));
 var rounding = 0;
 var cryptoName = "THB_USDT";
 var currentPrice = -1;
-var timeInterval = 5000;
+var timeInterval = 1000;
 var historyOrder = [];
 var floatDecimalNumberFixed = 2;
 var buyPerZone = 10; //THB
 var isErrorSomewhere = false;
+var cashFlow = 0;
 // Zone Setting
 var zones = [];
-var maxZone = 31.6;
-var minZone = 31.2;
-var amountZone = 3;
+var maxZone = 32.5;
+var minZone = 31.5;
+var amountZone = 10;
 // New Version ----------------------------------------------------
 function init() {
     return __awaiter(this, void 0, void 0, function () {
@@ -136,21 +137,22 @@ function init() {
                         return [2 /*return*/];
                     }
                     setInterval(function () { return __awaiter(_this, void 0, void 0, function () {
-                        var result;
                         return __generator(this, function (_a) {
-                            switch (_a.label) {
-                                case 0: return [4 /*yield*/, bitkubManage_1.default.getInstance().getMyOrder(cryptoName)];
-                                case 1:
-                                    result = (_a.sent()).result;
-                                    historyOrder = result;
-                                    // -----------------------------------------------------------------
-                                    zones.map(function (zone, index) {
-                                        buy(zone);
-                                        sell(zone);
-                                        checkOrderHistory(zone);
-                                    });
-                                    return [2 /*return*/];
-                            }
+                            console.clear();
+                            // -----------------------------------------------------------------
+                            // const { result } = await BitkubManager.getInstance().getMyOrder(
+                            //   cryptoName
+                            // );
+                            // historyOrder = result;
+                            // -----------------------------------------------------------------
+                            log(cashFlow.toString() + " Cash Flow", "common");
+                            zones.map(function (zone, index) {
+                                // buy(zone);
+                                // sell(zone);
+                                // checkOrderHistory(zone);
+                                display(zone);
+                            });
+                            return [2 /*return*/];
                         });
                     }); }, timeInterval);
                     return [3 /*break*/, 5];
@@ -163,6 +165,37 @@ function init() {
         });
     });
 }
+function display(zone) {
+    var zoneNumber = zone.zoneNumber, startAt = zone.startAt, endAt = zone.endAt, isBuy = zone.isBuy, value = zone.value, inOrder = zone.inOrder, orderType = zone.orderType, order = zone.order;
+    var arrow = "";
+    // "\x1b[41m%s\x1b[0m" // Red
+    // "\x1b[44m%s\x1b[0m" // Blue
+    // "\x1b[42m%s\x1b[0m" // Green
+    // "\x1b[46m%s\x1b[0m" // Cyan
+    if (currentPrice > startAt && currentPrice < endAt) {
+        arrow = "<--- Current Price";
+    }
+    else {
+        arrow = "";
+    }
+    if (inOrder === false && isBuy == false) {
+        console.log(" Z[" + zoneNumber + "]: " + startAt.toFixed(2) + " - " + endAt.toFixed(2) + " " + arrow);
+    }
+    else if (inOrder === true) {
+        if (orderType === "BUY") {
+            console.log("\x1b[42m%s\x1b[0m", "" +
+                (" Z[" + zoneNumber + "]: " + startAt.toFixed(2) + " - " + endAt.toFixed(2) + " In Order[BUY] " + arrow));
+        }
+        else if (orderType === "SELL") {
+            console.log("\x1b[41m%s\x1b[0m", "" +
+                (" Z[" + zoneNumber + "]: " + startAt.toFixed(2) + " - " + endAt.toFixed(2) + " In Order[SELL] " + arrow));
+        }
+    }
+    else if (isBuy == true) {
+        console.log("\x1b[44m%s\x1b[0m", "" +
+            (" Z[" + zoneNumber + "]: " + startAt.toFixed(2) + " - " + endAt.toFixed(2) + " In State Value: " + value + " " + arrow));
+    }
+}
 function generateZone(maxZone, minZone, amountZone) {
     var diff = maxZone - minZone;
     var lengthPerZone = diff / amountZone;
@@ -174,6 +207,7 @@ function generateZone(maxZone, minZone, amountZone) {
             isBuy: false,
             value: 0,
             inOrder: false,
+            orderType: "",
             order: {},
         },
     ];
@@ -188,6 +222,7 @@ function generateZone(maxZone, minZone, amountZone) {
             isBuy: false,
             value: 0,
             inOrder: false,
+            orderType: "",
             order: {},
         });
         test = test + lengthPerZone;
@@ -208,12 +243,11 @@ function buy(zone) {
                             .createBuy(cryptoName, buyPerZone, zone.startAt, "limit")
                             .then(function (_a) {
                             var result = _a.result;
-                            console.log("Zone Index: " + zone.zoneNumber + ", Order at : " + zone.startAt);
                             var newZoneData = zone;
                             newZoneData.inOrder = true;
                             newZoneData.order = result;
+                            newZoneData.orderType = "BUY";
                             zones[zone.zoneNumber] = newZoneData;
-                            console.log(zones[zone.zoneNumber]);
                         })
                             .catch(function (error) {
                             log(error, "error");
@@ -228,9 +262,15 @@ function buy(zone) {
 }
 function sell(zone) {
     return __awaiter(this, void 0, void 0, function () {
+        var newZoneData;
         return __generator(this, function (_a) {
             if (currentPrice >= zone.endAt && zone.isBuy === true) {
-                console.log("Zone Index: " + zone.zoneNumber + " is Sell");
+                newZoneData = zone;
+                newZoneData.inOrder = true;
+                newZoneData.isBuy = false;
+                newZoneData.value = 0;
+                newZoneData.orderType = "SELL";
+                zones[zone.zoneNumber] = newZoneData;
             }
             return [2 /*return*/];
         });
@@ -238,9 +278,28 @@ function sell(zone) {
 }
 function checkOrderHistory(zone) {
     return __awaiter(this, void 0, void 0, function () {
+        var newZoneData, newZoneData;
         return __generator(this, function (_a) {
             if (zone.order && zone.inOrder === true) {
-                console.log("Check order at zone: ", zone.zoneNumber, historyOrder.find(function (x) { return x.id === zone.order.id; }));
+                if (historyOrder.find(function (x) { return x.id === zone.order.id; })) {
+                    return [2 /*return*/];
+                }
+                if (zone.orderType === "BUY") {
+                    newZoneData = zone;
+                    newZoneData.inOrder = false;
+                    newZoneData.isBuy = true;
+                    newZoneData.value = zone.order.rec;
+                    newZoneData.order = {};
+                    zones[zone.zoneNumber] = newZoneData;
+                }
+                else if (zone.orderType === "SELL") {
+                    newZoneData = zone;
+                    newZoneData.inOrder = false;
+                    newZoneData.isBuy = false;
+                    newZoneData.value = 0;
+                    newZoneData.order = {};
+                    zones[zone.zoneNumber] = newZoneData;
+                }
             }
             return [2 /*return*/];
         });
