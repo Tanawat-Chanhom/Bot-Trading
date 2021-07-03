@@ -46,10 +46,9 @@ var bitkubManage_1 = __importDefault(require("./services/bitkubManage"));
  ** Version 2: Variable
  **
  */
-var rounding = 0;
 var cryptoName = "THB_USDT";
 var currentPrice = -1;
-var timeInterval = 5000;
+var timeInterval = 1000;
 var historyOrder = [];
 var floatDecimalNumberFixed = 2;
 var isErrorSomewhere = false;
@@ -57,10 +56,10 @@ var cashFlow = 0;
 var logs = [];
 // Zone Setting
 var zones = [];
-var maxZone = 31.8;
-var minZone = 31.5;
+var maxZone = 31.95;
+var minZone = 31.88;
 var amountZone = 1; //Zone
-var buyPerZone = 10; //THB
+var buyPerZone = 20; //THB
 // New Version ----------------------------------------------------
 function init() {
     return __awaiter(this, void 0, void 0, function () {
@@ -138,33 +137,26 @@ function init() {
                         return [2 /*return*/];
                     }
                     setInterval(function () { return __awaiter(_this, void 0, void 0, function () {
-                        var result;
                         var _this = this;
                         return __generator(this, function (_a) {
-                            switch (_a.label) {
-                                case 0: return [4 /*yield*/, bitkubManage_1.default.getInstance().getMyOrder(cryptoName)];
-                                case 1:
-                                    result = (_a.sent()).result;
-                                    historyOrder = result;
-                                    // -----------------------------------------------------------------
-                                    // console.clear();
-                                    // console.log(`Cash Flow: ${cashFlow} THB`);
-                                    // displayLogs();
-                                    // displayZone();
-                                    zones.map(function (zone, index) { return __awaiter(_this, void 0, void 0, function () {
-                                        return __generator(this, function (_a) {
-                                            if (!zone.inOrder) {
-                                                buy(zone).then(function () {
-                                                    sell(zone);
-                                                });
-                                            }
-                                            return [2 /*return*/];
-                                        });
-                                    }); });
+                            zones.map(function (zone, index) { return __awaiter(_this, void 0, void 0, function () {
+                                return __generator(this, function (_a) {
+                                    buy(zone).then(function () {
+                                        sell(zone);
+                                    });
                                     return [2 /*return*/];
-                            }
+                                });
+                            }); });
+                            return [2 /*return*/];
                         });
                     }); }, timeInterval);
+                    setInterval(function () {
+                        console.clear();
+                        console.log("Cash Flow: " + cashFlow + " THB");
+                        console.log("Current Price: " + currentPrice);
+                        displayLogs();
+                        displayZone();
+                    }, 500);
                     return [3 /*break*/, 5];
                 case 4:
                     error_1 = _a.sent();
@@ -258,7 +250,7 @@ function buy(zone) {
                 case 0: return [4 /*yield*/, bitkubManage_1.default.getInstance().wallets("THB")];
                 case 1:
                     wallet = _a.sent();
-                    if (!(wallet > 10)) return [3 /*break*/, 3];
+                    if (!(wallet > 20)) return [3 /*break*/, 4];
                     return [4 /*yield*/, checkOrderHistory(zone).then(function () { return __awaiter(_this, void 0, void 0, function () {
                             return __generator(this, function (_a) {
                                 switch (_a.label) {
@@ -287,8 +279,11 @@ function buy(zone) {
                         }); })];
                 case 2:
                     _a.sent();
-                    _a.label = 3;
-                case 3: return [2 /*return*/];
+                    return [4 /*yield*/, updateOrderHistory()];
+                case 3:
+                    _a.sent();
+                    _a.label = 4;
+                case 4: return [2 /*return*/];
             }
         });
     });
@@ -302,7 +297,7 @@ function sell(zone) {
                         return __generator(this, function (_a) {
                             switch (_a.label) {
                                 case 0:
-                                    if (!(currentPrice >= zone.endAt && zone.isBuy === true)) return [3 /*break*/, 2];
+                                    if (!(zone.isBuy === true)) return [3 /*break*/, 2];
                                     return [4 /*yield*/, bitkubManage_1.default.getInstance()
                                             .createSell(cryptoName, zone.order.rec, zone.endAt, "limit")
                                             .then(function (_a) {
@@ -328,6 +323,9 @@ function sell(zone) {
                     }); })];
                 case 1:
                     _a.sent();
+                    return [4 /*yield*/, updateOrderHistory()];
+                case 2:
+                    _a.sent();
                     return [2 /*return*/];
             }
         });
@@ -335,29 +333,28 @@ function sell(zone) {
 }
 function checkOrderHistory(zone) {
     return __awaiter(this, void 0, void 0, function () {
+        var newZoneData, newZoneData;
         return __generator(this, function (_a) {
-            if (zone.order && zone.inOrder === true) {
-                console.log(historyOrder);
-                console.log(zone.order.id);
-                console.log(historyOrder.find(function (x) { return x.id === zone.order.id; }));
-                // if (historyOrder.find((x: any) => x.id === zone.order.id)) {
-                //   return;
-                // }
-                // if (zone.orderType === "BUY") {
-                //   let newZoneData = zone;
-                //   newZoneData.inOrder = false;
-                //   newZoneData.isBuy = true;
-                //   newZoneData.value = zone.order.rec;
-                //   zones[zone.zoneNumber] = newZoneData;
-                // } else if (zone.orderType === "SELL") {
-                //   cashFlow += Math.abs(zone.order.rec * zone.endAt - buyPerZone);
-                //   let newZoneData = zone;
-                //   newZoneData.inOrder = false;
-                //   newZoneData.isBuy = false;
-                //   newZoneData.value = 0;
-                //   newZoneData.order = {};
-                //   zones[zone.zoneNumber] = newZoneData;
-                // }
+            if (zone.inOrder === true) {
+                if (historyOrder.find(function (x) { return x.id === zone.order.id; })) {
+                    return [2 /*return*/];
+                }
+                if (zone.orderType === "BUY") {
+                    newZoneData = zone;
+                    newZoneData.inOrder = false;
+                    newZoneData.isBuy = true;
+                    newZoneData.value = zone.order.rec;
+                    zones[zone.zoneNumber] = newZoneData;
+                }
+                else if (zone.orderType === "SELL") {
+                    cashFlow += Math.abs(zone.order.rec - buyPerZone);
+                    newZoneData = zone;
+                    newZoneData.inOrder = false;
+                    newZoneData.isBuy = false;
+                    newZoneData.value = 0;
+                    newZoneData.order = {};
+                    zones[zone.zoneNumber] = newZoneData;
+                }
             }
             return [2 /*return*/];
         });
@@ -366,6 +363,20 @@ function checkOrderHistory(zone) {
 function fixedNumber(number) {
     var newNumber = parseFloat(number.toFixed(floatDecimalNumberFixed));
     return newNumber;
+}
+function updateOrderHistory() {
+    return __awaiter(this, void 0, void 0, function () {
+        var result;
+        return __generator(this, function (_a) {
+            switch (_a.label) {
+                case 0: return [4 /*yield*/, bitkubManage_1.default.getInstance().getMyOrder(cryptoName)];
+                case 1:
+                    result = (_a.sent()).result;
+                    historyOrder = result;
+                    return [2 /*return*/];
+            }
+        });
+    });
 }
 function log(text, type) {
     var newDate = new Date()
