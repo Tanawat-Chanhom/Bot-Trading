@@ -4,7 +4,7 @@ import fs from "fs";
 
 /*
  **
- ** Version 2: Variable
+ ** Version 2: Variable 461.82
  **
  */
 const cryptoName: string = "THB_USDT";
@@ -18,8 +18,8 @@ var logs: log[] = [];
 
 // Zone Setting
 var zones: any = [];
-var maxZone: number = 31.95;
-var minZone: number = 31.88;
+var maxZone: number = 31.79;
+var minZone: number = 31.73;
 var amountZone: number = 1; //Zone
 var buyPerZone: number = 20; //THB
 
@@ -40,10 +40,8 @@ type logType = "system" | "common" | "error";
 interface log {
   text: string;
   timestamp: string;
-  logType: "system" | "common" | "error";
+  logType: logType;
 }
-
-// New Version ----------------------------------------------------
 
 async function init() {
   try {
@@ -105,7 +103,7 @@ async function init() {
       console.log(`Current Price: ${currentPrice}`);
       displayLogs();
       displayZone();
-    }, 500);
+    }, 1000);
   } catch (error) {
     console.error(error);
   }
@@ -113,14 +111,17 @@ async function init() {
 
 function displayLogs() {
   let beforeSelect = logs.slice(-10);
-  console.log("//////////////////////////////////////");
+  console.log("/".repeat(62));
   beforeSelect.map((log) => {
     console.log(
       "\x1b[40m%s\x1b[0m",
-      "" + `[${log.logType}] ${log.text} --> ${log.timestamp} `
+      "" +
+        `[${log.logType.padEnd(7, " ")}] ${log.text.padEnd(30, " ")} ${
+          log.timestamp
+        } `
     );
   });
-  console.log("//////////////////////////////////////");
+  console.log("/".repeat(62));
 }
 
 function displayZone() {
@@ -270,7 +271,8 @@ async function checkOrderHistory(zone: any) {
       newZoneData.value = zone.order.rec;
       zones[zone.zoneNumber] = newZoneData;
     } else if (zone.orderType === "SELL") {
-      cashFlow += Math.abs(zone.order.rec - buyPerZone);
+      cashFlow = cashFlow + (zone.order.rec - buyPerZone);
+      log(zone.order.rec + "", "common");
       let newZoneData = zone;
       newZoneData.inOrder = false;
       newZoneData.isBuy = false;

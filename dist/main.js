@@ -43,7 +43,7 @@ var socketManager_1 = __importDefault(require("./services/socketManager"));
 var bitkubManage_1 = __importDefault(require("./services/bitkubManage"));
 /*
  **
- ** Version 2: Variable
+ ** Version 2: Variable 461.82
  **
  */
 var cryptoName = "THB_USDT";
@@ -56,11 +56,10 @@ var cashFlow = 0;
 var logs = [];
 // Zone Setting
 var zones = [];
-var maxZone = 31.95;
-var minZone = 31.88;
+var maxZone = 31.79;
+var minZone = 31.73;
 var amountZone = 1; //Zone
 var buyPerZone = 20; //THB
-// New Version ----------------------------------------------------
 function init() {
     return __awaiter(this, void 0, void 0, function () {
         var error_1;
@@ -156,7 +155,7 @@ function init() {
                         console.log("Current Price: " + currentPrice);
                         displayLogs();
                         displayZone();
-                    }, 500);
+                    }, 1000);
                     return [3 /*break*/, 5];
                 case 4:
                     error_1 = _a.sent();
@@ -169,11 +168,12 @@ function init() {
 }
 function displayLogs() {
     var beforeSelect = logs.slice(-10);
-    console.log("//////////////////////////////////////");
+    console.log("/".repeat(62));
     beforeSelect.map(function (log) {
-        console.log("\x1b[40m%s\x1b[0m", "" + ("[" + log.logType + "] " + log.text + " --> " + log.timestamp + " "));
+        console.log("\x1b[40m%s\x1b[0m", "" +
+            ("[" + log.logType.padEnd(7, " ") + "] " + log.text.padEnd(30, " ") + " " + log.timestamp + " "));
     });
-    console.log("//////////////////////////////////////");
+    console.log("/".repeat(62));
 }
 function displayZone() {
     zones.reverse().map(function (zone) {
@@ -347,7 +347,8 @@ function checkOrderHistory(zone) {
                     zones[zone.zoneNumber] = newZoneData;
                 }
                 else if (zone.orderType === "SELL") {
-                    cashFlow += Math.abs(zone.order.rec - buyPerZone);
+                    cashFlow = cashFlow + (zone.order.rec - buyPerZone);
+                    log(zone.order.rec + "", "common");
                     newZoneData = zone;
                     newZoneData.inOrder = false;
                     newZoneData.isBuy = false;
