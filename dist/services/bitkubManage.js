@@ -39,11 +39,23 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.OrderInit = void 0;
 var axios_1 = __importDefault(require("axios"));
 var crypto_1 = __importDefault(require("crypto"));
 var API_KEY = "316f12589c0b5d279c0447bbb08be7f1";
 var API_SECRET = "dc5de89c44bf24f7683e84ec858646d5";
 var API_HOST = "https://api.bitkub.com";
+exports.OrderInit = {
+    id: 0,
+    hash: "",
+    typ: "",
+    amt: 0,
+    rat: 0,
+    fee: 0,
+    cre: 0,
+    rec: 0,
+    ts: 0,
+};
 var BitkubManager = /** @class */ (function () {
     function BitkubManager(API_KEY, API_SECRET, API_HOST) {
         this.API_KEY = API_KEY;
@@ -124,7 +136,7 @@ var BitkubManager = /** @class */ (function () {
                         return [4 /*yield*/, axios_1.default.post(API_HOST + "/api/market/my-open-orders", JSON.stringify(body), { headers: this.HEADER })];
                     case 2:
                         res = _b.sent();
-                        return [2 /*return*/, res.data];
+                        return [2 /*return*/, res.data.result];
                 }
             });
         });

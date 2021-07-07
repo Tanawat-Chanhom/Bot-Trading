@@ -117,3 +117,5 @@ package-lock.json
 
 #ENV File
 env.json
+
+dist

@@ -57,21 +57,26 @@ var cashFlow = 0;
 var logs = [];
 // Zone Setting
 var zones = [];
-var maxZone = 31.8;
-var minZone = 31.5;
-var amountZone = 3; //Zone
+var maxZone = 32.0;
+var minZone = 31.94;
+var amountZone = 1; //Zone
 var buyPerZone = 20; //THB
+var bitkubManage_2 = require("./services/bitkubManage");
 var IO = socketManager_1.default.getInstance(cryptoName);
 function init() {
     return __awaiter(this, void 0, void 0, function () {
-        var checkingPrice_1, error_1;
+        var result, checkingPrice_1, error_1;
         var _this = this;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
-                    _a.trys.push([0, 4, , 5]);
-                    return [4 /*yield*/, socketConnection()];
+                    _a.trys.push([0, 5, , 6]);
+                    return [4 /*yield*/, bitkubManage_1.default.getInstance().getMyOrder(cryptoName)];
                 case 1:
+                    result = _a.sent();
+                    console.log(result);
+                    return [2 /*return*/];
+                case 2:
                     _a.sent();
                     return [4 /*yield*/, (function () { return __awaiter(_this, void 0, void 0, function () {
                             var res;
@@ -96,7 +101,7 @@ function init() {
                             .catch(function (error) {
                             log(error, "error");
                         })];
-                case 2:
+                case 3:
                     _a.sent();
                     return [4 /*yield*/, (function () { return __awaiter(_this, void 0, void 0, function () {
                             return __generator(this, function (_a) {
@@ -115,7 +120,7 @@ function init() {
                             .catch(function (error) {
                             log(error, "error");
                         })];
-                case 3:
+                case 4:
                     _a.sent();
                     setInterval(function () {
                         console.clear();
@@ -126,9 +131,7 @@ function init() {
                     checkingPrice_1 = 0;
                     setInterval(function () { return __awaiter(_this, void 0, void 0, function () {
                         return __generator(this, function (_a) {
-                            // log(`${checkingPrice} - ${currentPrice}`, "common");
                             if (currentPrice !== checkingPrice_1 && circleInprogress === false) {
-                                // Do Something
                                 marketCircle();
                                 checkingPrice_1 = currentPrice;
                                 circle++;
@@ -136,13 +139,13 @@ function init() {
                             return [2 /*return*/];
                         });
                     }); }, timeInterval);
-                    return [3 /*break*/, 5];
-                case 4:
+                    return [3 /*break*/, 6];
+                case 5:
                     error_1 = _a.sent();
                     log(error_1 + "", "error");
                     console.log("Catch: ", error_1);
-                    return [3 /*break*/, 5];
-                case 5: return [2 /*return*/];
+                    return [3 /*break*/, 6];
+                case 6: return [2 /*return*/];
             }
         });
     });
@@ -179,9 +182,7 @@ function buy(zone) {
         var _this = this;
         return __generator(this, function (_a) {
             switch (_a.label) {
-                case 0:
-                    log("Enter BUY!! - " + zone.zoneNumber, "common");
-                    return [4 /*yield*/, bitkubManage_1.default.getInstance().wallets("THB")];
+                case 0: return [4 /*yield*/, bitkubManage_1.default.getInstance().wallets("THB")];
                 case 1:
                     wallet = _a.sent();
                     if (!(wallet > 20)) return [3 /*break*/, 4];
@@ -215,9 +216,10 @@ function buy(zone) {
                         }); })];
                 case 2:
                     _a.sent();
-                    log("Out BUY!! - " + zone.zoneNumber, "common");
+                    // log(`Out BUY!! - ${zone.zoneNumber}`, "common");
                     return [4 /*yield*/, updateOrderHistory()];
                 case 3:
+                    // log(`Out BUY!! - ${zone.zoneNumber}`, "common");
                     _a.sent();
                     _a.label = 4;
                 case 4: return [2 /*return*/];
@@ -230,41 +232,40 @@ function sell(zone) {
         var _this = this;
         return __generator(this, function (_a) {
             switch (_a.label) {
-                case 0:
-                    log("Enter SELL!! - " + zone.zoneNumber, "common");
-                    return [4 /*yield*/, checkOrderHistory(zone).then(function () { return __awaiter(_this, void 0, void 0, function () {
-                            return __generator(this, function (_a) {
-                                switch (_a.label) {
-                                    case 0:
-                                        if (!(zone.isBuy === true)) return [3 /*break*/, 2];
-                                        return [4 /*yield*/, bitkubManage_1.default.getInstance()
-                                                .createSell(cryptoName, zone.cryptoReceived, zone.endAt, "limit")
-                                                .then(function (_a) {
-                                                var result = _a.result;
-                                                var cryptoSpent = zone.cryptoReceived;
-                                                var newZoneData = zone;
-                                                newZoneData.inOrder = true;
-                                                newZoneData.isBuy = false;
-                                                newZoneData.cryptoReceived = 0;
-                                                newZoneData.orderType = "SELL";
-                                                newZoneData.order = result;
-                                                newZoneData.moneyReceived = result.rec;
-                                                zones[zone.zoneNumber] = newZoneData;
-                                                log("Zone " + zone.zoneNumber + " is Order Sell [" + cryptoSpent + " " + cryptoName.split("_")[1] + "]", "common");
-                                            })
-                                                .catch(function (err) {
-                                                log(err, "error");
-                                            })];
-                                    case 1:
-                                        _a.sent();
-                                        _a.label = 2;
-                                    case 2:
-                                        log("Out SELL!! - " + zone.zoneNumber, "common");
-                                        return [2 /*return*/];
-                                }
-                            });
-                        }); })];
+                case 0: 
+                // log(`Enter SELL!! - ${zone.zoneNumber}`, "common");
+                return [4 /*yield*/, checkOrderHistory(zone).then(function () { return __awaiter(_this, void 0, void 0, function () {
+                        return __generator(this, function (_a) {
+                            switch (_a.label) {
+                                case 0:
+                                    if (!(zone.isBuy === true)) return [3 /*break*/, 2];
+                                    return [4 /*yield*/, bitkubManage_1.default.getInstance()
+                                            .createSell(cryptoName, zone.cryptoReceived, zone.endAt, "limit")
+                                            .then(function (_a) {
+                                            var result = _a.result;
+                                            var cryptoSpent = zone.cryptoReceived;
+                                            var newZoneData = zone;
+                                            newZoneData.inOrder = true;
+                                            newZoneData.isBuy = false;
+                                            newZoneData.cryptoReceived = 0;
+                                            newZoneData.orderType = "SELL";
+                                            newZoneData.order = result;
+                                            newZoneData.moneyReceived = result.rec;
+                                            zones[zone.zoneNumber] = newZoneData;
+                                            log("Zone " + zone.zoneNumber + " is Order Sell [" + cryptoSpent + " " + cryptoName.split("_")[1] + "]", "common");
+                                        })
+                                            .catch(function (err) {
+                                            log(err, "error");
+                                        })];
+                                case 1:
+                                    _a.sent();
+                                    _a.label = 2;
+                                case 2: return [2 /*return*/];
+                            }
+                        });
+                    }); })];
                 case 1:
+                    // log(`Enter SELL!! - ${zone.zoneNumber}`, "common");
                     _a.sent();
                     return [4 /*yield*/, updateOrderHistory()];
                 case 2:
@@ -289,9 +290,7 @@ function checkOrderHistory(zone) {
                     zones[zone.zoneNumber] = newZoneData;
                 }
                 else if (zone.orderType === "SELL") {
-                    cashFlow =
-                        cashFlow +
-                            (parseFloat(zone.moneyReceived) - parseFloat(zone.moneySpent));
+                    cashFlow = cashFlow + (zone.moneyReceived - zone.moneySpent);
                     newZoneData = zone;
                     newZoneData.inOrder = false;
                     newZoneData.isBuy = false;
@@ -299,7 +298,7 @@ function checkOrderHistory(zone) {
                     newZoneData.moneyReceived = 0;
                     newZoneData.moneySpent = 0;
                     newZoneData.orderType = "";
-                    newZoneData.order = {};
+                    newZoneData.order = bitkubManage_2.OrderInit;
                     zones[zone.zoneNumber] = newZoneData;
                 }
             }
@@ -363,7 +362,7 @@ function socketConnection() {
     });
 }
 function displayLogs() {
-    var beforeSelect = logs.slice(-100);
+    var beforeSelect = logs.slice(-15);
     console.log("/".repeat(65));
     beforeSelect.map(function (log) {
         console.log("\x1b[40m%s\x1b[0m", "" +
@@ -422,7 +421,7 @@ function generateZone(maxZone, minZone, amountZone) {
             moneyReceived: 0,
             inOrder: false,
             orderType: "",
-            order: {},
+            order: bitkubManage_2.OrderInit,
         },
     ];
     var test = minZone;
@@ -439,7 +438,7 @@ function generateZone(maxZone, minZone, amountZone) {
             moneyReceived: 0,
             inOrder: false,
             orderType: "",
-            order: {},
+            order: bitkubManage_2.OrderInit,
         });
         test = test + lengthPerZone;
     }
@@ -456,7 +455,7 @@ function updateOrderHistory() {
             switch (_a.label) {
                 case 0: return [4 /*yield*/, bitkubManage_1.default.getInstance().getMyOrder(cryptoName)];
                 case 1:
-                    result = (_a.sent()).result;
+                    result = _a.sent();
                     historyOrder = result;
                     return [2 /*return*/];
             }

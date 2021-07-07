@@ -23,7 +23,7 @@ type cryptoInfo = {
   prevOpen: number;
 };
 
-type Order = {
+export type Order = {
   id: number;
   hash: string;
   typ: string;
@@ -32,6 +32,33 @@ type Order = {
   fee: number;
   cre: number;
   rec: number;
+  ts: number;
+};
+
+export const OrderInit: Order = {
+  id: 0,
+  hash: "",
+  typ: "",
+  amt: 0,
+  rat: 0,
+  fee: 0,
+  cre: 0,
+  rec: 0,
+  ts: 0,
+};
+
+export type MyOrder = {
+  id: number;
+  hash: string;
+  side: string;
+  type: string;
+  rate: string;
+  fee: string;
+  credit: string;
+  amount: string;
+  receive: string;
+  parent_id: number;
+  super_id: number;
   ts: number;
 };
 
@@ -94,7 +121,7 @@ class BitkubManager {
   /**
    * Get data my order crypto in bitkub
    */
-  public async getMyOrder(name: string): Promise<any> {
+  public async getMyOrder(name: string): Promise<MyOrder[]> {
     let body: any = {
       sym: name,
       ts: await this.timeserver(),
@@ -107,7 +134,7 @@ class BitkubManager {
       JSON.stringify(body),
       { headers: this.HEADER }
     );
-    return res.data;
+    return res.data.result;
     // [
     //   {
     //     id: 8739399,

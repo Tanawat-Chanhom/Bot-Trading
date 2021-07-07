@@ -11,7 +11,7 @@ var circle: number = 0;
 var circleInprogress: boolean = false;
 var currentPrice: number = -1;
 var timeInterval: number = 1000;
-var historyOrder: Object[] = [];
+var historyOrder: MyOrder[] = [];
 var floatDecimalNumberFixed: number = 2;
 var cashFlow: number = 0;
 var logs: log[] = [];
@@ -34,7 +34,7 @@ type Zone = {
   moneyReceived: number;
   inOrder: boolean;
   orderType: "BUY" | "SELL" | "";
-  order: object;
+  order: Order;
 };
 type logType = "system" | "common" | "error";
 interface log {
@@ -42,6 +42,7 @@ interface log {
   timestamp: string;
   logType: logType;
 }
+import { Order, MyOrder, OrderInit } from "./services/bitkubManage";
 
 let IO = SocketIOManager.getInstance(cryptoName);
 
@@ -87,9 +88,7 @@ async function init() {
 
     let checkingPrice: number = 0;
     setInterval(async () => {
-      // log(`${checkingPrice} - ${currentPrice}`, "common");
       if (currentPrice !== checkingPrice && circleInprogress === false) {
-        // Do Something
         marketCircle();
         checkingPrice = currentPrice;
         circle++;
@@ -184,9 +183,9 @@ async function sell(zone: Zone) {
   await updateOrderHistory();
 }
 
-async function checkOrderHistory(zone: any) {
+async function checkOrderHistory(zone: Zone) {
   if (zone.inOrder === true) {
-    if (historyOrder.find((x: any) => x.id === zone.order.id)) {
+    if (historyOrder.find((x: MyOrder) => x.id === zone.order.id)) {
       return;
     }
     if (zone.orderType === "BUY") {
@@ -195,9 +194,7 @@ async function checkOrderHistory(zone: any) {
       newZoneData.isBuy = true;
       zones[zone.zoneNumber] = newZoneData;
     } else if (zone.orderType === "SELL") {
-      cashFlow =
-        cashFlow +
-        (parseFloat(zone.moneyReceived) - parseFloat(zone.moneySpent));
+      cashFlow = cashFlow + (zone.moneyReceived - zone.moneySpent);
       let newZoneData = zone;
       newZoneData.inOrder = false;
       newZoneData.isBuy = false;
@@ -205,7 +202,7 @@ async function checkOrderHistory(zone: any) {
       newZoneData.moneyReceived = 0;
       newZoneData.moneySpent = 0;
       newZoneData.orderType = "";
-      newZoneData.order = {};
+      newZoneData.order = OrderInit;
 
       zones[zone.zoneNumber] = newZoneData;
     }
@@ -309,7 +306,7 @@ function generateZone(maxZone: number, minZone: number, amountZone: number) {
       moneyReceived: 0,
       inOrder: false,
       orderType: "",
-      order: {},
+      order: OrderInit,
     },
   ];
   let test: number = minZone;
@@ -326,7 +323,7 @@ function generateZone(maxZone: number, minZone: number, amountZone: number) {
       moneyReceived: 0,
       inOrder: false,
       orderType: "",
-      order: {},
+      order: OrderInit,
     });
     test = test + lengthPerZone;
   }
@@ -340,7 +337,7 @@ function fixedNumber(number: number): number {
 }
 
 async function updateOrderHistory(): Promise<any> {
-  const { result } = await BitkubManager.getInstance().getMyOrder(cryptoName);
+  const result = await BitkubManager.getInstance().getMyOrder(cryptoName);
   historyOrder = result;
 }
 
