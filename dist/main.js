@@ -43,48 +43,34 @@ var socketManager_1 = __importDefault(require("./services/socketManager"));
 var bitkubManage_1 = __importDefault(require("./services/bitkubManage"));
 /*
  **
- ** Version 2: Variable 461.82
+ ** Version 2: Variable 461.86
  **
  */
 var cryptoName = "THB_USDT";
+var circle = 0;
+var circleInprogress = false;
 var currentPrice = -1;
 var timeInterval = 1000;
 var historyOrder = [];
 var floatDecimalNumberFixed = 2;
-var isErrorSomewhere = false;
 var cashFlow = 0;
 var logs = [];
 // Zone Setting
 var zones = [];
-var maxZone = 31.79;
-var minZone = 31.73;
-var amountZone = 1; //Zone
+var maxZone = 31.8;
+var minZone = 31.5;
+var amountZone = 3; //Zone
 var buyPerZone = 20; //THB
+var IO = socketManager_1.default.getInstance(cryptoName);
 function init() {
     return __awaiter(this, void 0, void 0, function () {
-        var error_1;
+        var checkingPrice_1, error_1;
         var _this = this;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
                     _a.trys.push([0, 4, , 5]);
-                    return [4 /*yield*/, (function () { return __awaiter(_this, void 0, void 0, function () {
-                            var socket;
-                            return __generator(this, function (_a) {
-                                socket = socketManager_1.default.getInstance(cryptoName);
-                                socket.on("message", function (res) {
-                                    var data = JSON.parse(res.utf8Data.split("\n")[0]);
-                                    currentPrice = data.rat;
-                                });
-                                return [2 /*return*/];
-                            });
-                        }); })()
-                            .then(function () {
-                            log("Socket Connected!!", "system");
-                        })
-                            .catch(function (error) {
-                            log(error, "error");
-                        })];
+                    return [4 /*yield*/, socketConnection()];
                 case 1:
                     _a.sent();
                     return [4 /*yield*/, (function () { return __awaiter(_this, void 0, void 0, function () {
@@ -131,115 +117,61 @@ function init() {
                         })];
                 case 3:
                     _a.sent();
-                    if (isErrorSomewhere) {
-                        log("Error", "common");
-                        return [2 /*return*/];
-                    }
-                    setInterval(function () { return __awaiter(_this, void 0, void 0, function () {
-                        var _this = this;
-                        return __generator(this, function (_a) {
-                            zones.map(function (zone, index) { return __awaiter(_this, void 0, void 0, function () {
-                                return __generator(this, function (_a) {
-                                    buy(zone).then(function () {
-                                        sell(zone);
-                                    });
-                                    return [2 /*return*/];
-                                });
-                            }); });
-                            return [2 /*return*/];
-                        });
-                    }); }, timeInterval);
                     setInterval(function () {
                         console.clear();
-                        console.log("Cash Flow: " + cashFlow + " THB");
-                        console.log("Current Price: " + currentPrice);
+                        console.log("Cash Flow: " + cashFlow + " THB | Current Price: " + currentPrice + " | Circle: " + circle);
                         displayLogs();
                         displayZone();
                     }, 1000);
+                    checkingPrice_1 = 0;
+                    setInterval(function () { return __awaiter(_this, void 0, void 0, function () {
+                        return __generator(this, function (_a) {
+                            // log(`${checkingPrice} - ${currentPrice}`, "common");
+                            if (currentPrice !== checkingPrice_1 && circleInprogress === false) {
+                                // Do Something
+                                marketCircle();
+                                checkingPrice_1 = currentPrice;
+                                circle++;
+                            }
+                            return [2 /*return*/];
+                        });
+                    }); }, timeInterval);
                     return [3 /*break*/, 5];
                 case 4:
                     error_1 = _a.sent();
-                    console.error(error_1);
+                    log(error_1 + "", "error");
+                    console.log("Catch: ", error_1);
                     return [3 /*break*/, 5];
                 case 5: return [2 /*return*/];
             }
         });
     });
 }
-function displayLogs() {
-    var beforeSelect = logs.slice(-10);
-    console.log("/".repeat(62));
-    beforeSelect.map(function (log) {
-        console.log("\x1b[40m%s\x1b[0m", "" +
-            ("[" + log.logType.padEnd(7, " ") + "] " + log.text.padEnd(30, " ") + " " + log.timestamp + " "));
-    });
-    console.log("/".repeat(62));
-}
-function displayZone() {
-    zones.reverse().map(function (zone) {
-        var zoneNumber = zone.zoneNumber, startAt = zone.startAt, endAt = zone.endAt, isBuy = zone.isBuy, value = zone.value, inOrder = zone.inOrder, orderType = zone.orderType;
-        var arrow = "";
-        // "\x1b[41m%s\x1b[0m" // Red
-        // "\x1b[44m%s\x1b[0m" // Blue
-        // "\x1b[42m%s\x1b[0m" // Green
-        // "\x1b[46m%s\x1b[0m" // Cyan
-        if (currentPrice > startAt && currentPrice < endAt) {
-            arrow = "<--- Current Price";
-        }
-        else {
-            arrow = "";
-        }
-        if (inOrder === false && isBuy == false) {
-            console.log(" Z[" + zoneNumber + "]: " + startAt.toFixed(2) + " - " + endAt.toFixed(2) + " " + arrow);
-        }
-        else if (inOrder === true) {
-            if (orderType === "BUY") {
-                console.log("\x1b[42m%s\x1b[0m", "" +
-                    (" Z[" + zoneNumber + "]: " + startAt.toFixed(2) + " - " + endAt.toFixed(2) + " In Order[BUY] " + arrow));
-            }
-            else if (orderType === "SELL") {
-                console.log("\x1b[41m%s\x1b[0m", "" +
-                    (" Z[" + zoneNumber + "]: " + startAt.toFixed(2) + " - " + endAt.toFixed(2) + " In Order[SELL] " + arrow));
-            }
-        }
-        else if (isBuy == true) {
-            console.log("\x1b[44m%s\x1b[0m", "" +
-                (" Z[" + zoneNumber + "]: " + startAt.toFixed(2) + " - " + endAt.toFixed(2) + " In State Value: " + value + " " + arrow));
-        }
-    });
-}
-function generateZone(maxZone, minZone, amountZone) {
-    var diff = maxZone - minZone;
-    var lengthPerZone = diff / amountZone;
-    var zone = [
-        {
-            zoneNumber: 0,
-            startAt: minZone,
-            endAt: fixedNumber(minZone + lengthPerZone),
-            isBuy: false,
-            value: 0,
-            inOrder: false,
-            orderType: "",
-            order: {},
-        },
-    ];
-    var test = minZone;
-    for (var index = 0; index < amountZone - 1; index++) {
-        var startAt = lengthPerZone + test;
-        var endAt = test + lengthPerZone * 2;
-        zone.push({
-            zoneNumber: index + 1,
-            startAt: fixedNumber(startAt),
-            endAt: fixedNumber(endAt),
-            isBuy: false,
-            value: 0,
-            inOrder: false,
-            orderType: "",
-            order: {},
+function marketCircle() {
+    return __awaiter(this, void 0, void 0, function () {
+        var zoneLength, zoneCount;
+        var _this = this;
+        return __generator(this, function (_a) {
+            zoneLength = zones.length;
+            zoneCount = 0;
+            circleInprogress = true;
+            zones.map(function (zone) { return __awaiter(_this, void 0, void 0, function () {
+                return __generator(this, function (_a) {
+                    buy(zone).then(function () {
+                        sell(zone).then(function () {
+                            zoneCount = zoneCount + 1;
+                            if (zoneLength === zoneCount) {
+                                circleInprogress = false;
+                                log("Circle Done!!", "common");
+                            }
+                        });
+                    });
+                    return [2 /*return*/];
+                });
+            }); });
+            return [2 /*return*/];
         });
-        test = test + lengthPerZone;
-    }
-    return zone;
+    });
 }
 function buy(zone) {
     return __awaiter(this, void 0, void 0, function () {
@@ -247,7 +179,9 @@ function buy(zone) {
         var _this = this;
         return __generator(this, function (_a) {
             switch (_a.label) {
-                case 0: return [4 /*yield*/, bitkubManage_1.default.getInstance().wallets("THB")];
+                case 0:
+                    log("Enter BUY!! - " + zone.zoneNumber, "common");
+                    return [4 /*yield*/, bitkubManage_1.default.getInstance().wallets("THB")];
                 case 1:
                     wallet = _a.sent();
                     if (!(wallet > 20)) return [3 /*break*/, 4];
@@ -264,8 +198,10 @@ function buy(zone) {
                                                 newZoneData.inOrder = true;
                                                 newZoneData.order = result;
                                                 newZoneData.orderType = "BUY";
+                                                newZoneData.moneySpent = result.amt;
+                                                newZoneData.cryptoReceived = result.rec;
                                                 zones[zone.zoneNumber] = newZoneData;
-                                                log("Zone " + zone.zoneNumber + " is Order buy", "common");
+                                                log("Zone " + zone.zoneNumber + " is Order Buy [" + result.amt + "\u0E3F]", "common");
                                             })
                                                 .catch(function (error) {
                                                 log(error, "error");
@@ -279,6 +215,7 @@ function buy(zone) {
                         }); })];
                 case 2:
                     _a.sent();
+                    log("Out BUY!! - " + zone.zoneNumber, "common");
                     return [4 /*yield*/, updateOrderHistory()];
                 case 3:
                     _a.sent();
@@ -293,34 +230,40 @@ function sell(zone) {
         var _this = this;
         return __generator(this, function (_a) {
             switch (_a.label) {
-                case 0: return [4 /*yield*/, checkOrderHistory(zone).then(function () { return __awaiter(_this, void 0, void 0, function () {
-                        return __generator(this, function (_a) {
-                            switch (_a.label) {
-                                case 0:
-                                    if (!(zone.isBuy === true)) return [3 /*break*/, 2];
-                                    return [4 /*yield*/, bitkubManage_1.default.getInstance()
-                                            .createSell(cryptoName, zone.order.rec, zone.endAt, "limit")
-                                            .then(function (_a) {
-                                            var result = _a.result;
-                                            var newZoneData = zone;
-                                            newZoneData.inOrder = true;
-                                            newZoneData.isBuy = false;
-                                            newZoneData.value = 0;
-                                            newZoneData.orderType = "SELL";
-                                            newZoneData.order = result;
-                                            zones[zone.zoneNumber] = newZoneData;
-                                            log("Zone " + zone.zoneNumber + " is Order Sell", "common");
-                                        })
-                                            .catch(function (err) {
-                                            log(err, "error");
-                                        })];
-                                case 1:
-                                    _a.sent();
-                                    _a.label = 2;
-                                case 2: return [2 /*return*/];
-                            }
-                        });
-                    }); })];
+                case 0:
+                    log("Enter SELL!! - " + zone.zoneNumber, "common");
+                    return [4 /*yield*/, checkOrderHistory(zone).then(function () { return __awaiter(_this, void 0, void 0, function () {
+                            return __generator(this, function (_a) {
+                                switch (_a.label) {
+                                    case 0:
+                                        if (!(zone.isBuy === true)) return [3 /*break*/, 2];
+                                        return [4 /*yield*/, bitkubManage_1.default.getInstance()
+                                                .createSell(cryptoName, zone.cryptoReceived, zone.endAt, "limit")
+                                                .then(function (_a) {
+                                                var result = _a.result;
+                                                var cryptoSpent = zone.cryptoReceived;
+                                                var newZoneData = zone;
+                                                newZoneData.inOrder = true;
+                                                newZoneData.isBuy = false;
+                                                newZoneData.cryptoReceived = 0;
+                                                newZoneData.orderType = "SELL";
+                                                newZoneData.order = result;
+                                                newZoneData.moneyReceived = result.rec;
+                                                zones[zone.zoneNumber] = newZoneData;
+                                                log("Zone " + zone.zoneNumber + " is Order Sell [" + cryptoSpent + " " + cryptoName.split("_")[1] + "]", "common");
+                                            })
+                                                .catch(function (err) {
+                                                log(err, "error");
+                                            })];
+                                    case 1:
+                                        _a.sent();
+                                        _a.label = 2;
+                                    case 2:
+                                        log("Out SELL!! - " + zone.zoneNumber, "common");
+                                        return [2 /*return*/];
+                                }
+                            });
+                        }); })];
                 case 1:
                     _a.sent();
                     return [4 /*yield*/, updateOrderHistory()];
@@ -343,16 +286,19 @@ function checkOrderHistory(zone) {
                     newZoneData = zone;
                     newZoneData.inOrder = false;
                     newZoneData.isBuy = true;
-                    newZoneData.value = zone.order.rec;
                     zones[zone.zoneNumber] = newZoneData;
                 }
                 else if (zone.orderType === "SELL") {
-                    cashFlow = cashFlow + (zone.order.rec - buyPerZone);
-                    log(zone.order.rec + "", "common");
+                    cashFlow =
+                        cashFlow +
+                            (parseFloat(zone.moneyReceived) - parseFloat(zone.moneySpent));
                     newZoneData = zone;
                     newZoneData.inOrder = false;
                     newZoneData.isBuy = false;
-                    newZoneData.value = 0;
+                    newZoneData.cryptoReceived = 0;
+                    newZoneData.moneyReceived = 0;
+                    newZoneData.moneySpent = 0;
+                    newZoneData.orderType = "";
                     newZoneData.order = {};
                     zones[zone.zoneNumber] = newZoneData;
                 }
@@ -360,6 +306,144 @@ function checkOrderHistory(zone) {
             return [2 /*return*/];
         });
     });
+}
+function socketConnection() {
+    return __awaiter(this, void 0, void 0, function () {
+        var _this = this;
+        return __generator(this, function (_a) {
+            IO.socket.on("connect", function (connection) {
+                connection.on("message", function (res) {
+                    var data = JSON.parse(res.utf8Data.split("\n")[0]);
+                    currentPrice = data.rat;
+                });
+                connection.on("error", function (res) { return __awaiter(_this, void 0, void 0, function () {
+                    return __generator(this, function (_a) {
+                        switch (_a.label) {
+                            case 0:
+                                log("Socket Error", "error");
+                                return [4 /*yield*/, IO.reconnect(socketConnection)];
+                            case 1:
+                                _a.sent();
+                                log("Socket Reconnection", "system");
+                                return [2 /*return*/];
+                        }
+                    });
+                }); });
+                connection.on("close", function (res) { return __awaiter(_this, void 0, void 0, function () {
+                    return __generator(this, function (_a) {
+                        switch (_a.label) {
+                            case 0:
+                                log("Socket Close", "system");
+                                return [4 /*yield*/, IO.reconnect(socketConnection)];
+                            case 1:
+                                _a.sent();
+                                log("Socket Reconnection", "system");
+                                return [2 /*return*/];
+                        }
+                    });
+                }); });
+            });
+            IO.socket.on("connectFailed", function () {
+                return __awaiter(this, void 0, void 0, function () {
+                    return __generator(this, function (_a) {
+                        switch (_a.label) {
+                            case 0:
+                                log("Connect Error!!", "error");
+                                return [4 /*yield*/, IO.reconnect(socketConnection)];
+                            case 1:
+                                _a.sent();
+                                log("Socket Reconnection", "system");
+                                return [2 /*return*/];
+                        }
+                    });
+                });
+            });
+            return [2 /*return*/];
+        });
+    });
+}
+function displayLogs() {
+    var beforeSelect = logs.slice(-100);
+    console.log("/".repeat(65));
+    beforeSelect.map(function (log) {
+        console.log("\x1b[40m%s\x1b[0m", "" +
+            ("[" + log.logType.padEnd(6, " ") + "] " + log.text.padEnd(35, " ") + " " + log.timestamp + " "));
+    });
+    console.log("/".repeat(65));
+}
+function displayZone() {
+    // "\x1b[41m%s\x1b[0m" // Red
+    // "\x1b[44m%s\x1b[0m" // Blue
+    // "\x1b[42m%s\x1b[0m" // Green
+    // "\x1b[46m%s\x1b[0m" // Cyan
+    zones.map(function (zone) {
+        var zoneNumber = zone.zoneNumber, startAt = zone.startAt, endAt = zone.endAt, isBuy = zone.isBuy, inOrder = zone.inOrder, orderType = zone.orderType;
+        var arrow = "";
+        var zoneNumberFormatted = zoneNumber.toString().padStart(3, "0");
+        var startAtFormatted = startAt.toFixed(2).toString();
+        var endAtFormatted = endAt.toFixed(2).toString();
+        var zoneRange = startAtFormatted + " - " + endAtFormatted;
+        var zoneRangeFormatted = zoneRange.padEnd(15, " ");
+        var zoneStatus = "";
+        var zoneColor = "46";
+        if (currentPrice > startAt && currentPrice < endAt) {
+            arrow = "<--- Current Price";
+        }
+        else {
+            arrow = "";
+        }
+        if (inOrder === false && isBuy == false) {
+            zoneStatus = "";
+        }
+        else if (inOrder === true) {
+            if (orderType === "BUY") {
+                zoneStatus = "In Order[BUY]";
+                zoneColor = "42";
+            }
+            else if (orderType === "SELL") {
+                zoneStatus = "In Order[SELL]";
+                zoneColor = "41";
+            }
+        }
+        console.log("\u001B[" + zoneColor + "m%s\u001B[0m", "Z[" + zoneNumberFormatted + "]: " + zoneRangeFormatted + " " + zoneStatus + " " + arrow);
+    });
+}
+function generateZone(maxZone, minZone, amountZone) {
+    var diff = maxZone - minZone;
+    var lengthPerZone = diff / amountZone;
+    var zone = [
+        {
+            zoneNumber: 0,
+            startAt: minZone,
+            endAt: fixedNumber(minZone + lengthPerZone),
+            isBuy: false,
+            cryptoReceived: 0,
+            moneySpent: 0,
+            moneyReceived: 0,
+            inOrder: false,
+            orderType: "",
+            order: {},
+        },
+    ];
+    var test = minZone;
+    for (var index = 0; index < amountZone - 1; index++) {
+        var startAt = lengthPerZone + test;
+        var endAt = test + lengthPerZone * 2;
+        zone.push({
+            zoneNumber: index + 1,
+            startAt: fixedNumber(startAt),
+            endAt: fixedNumber(endAt),
+            isBuy: false,
+            cryptoReceived: 0,
+            moneySpent: 0,
+            moneyReceived: 0,
+            inOrder: false,
+            orderType: "",
+            order: {},
+        });
+        test = test + lengthPerZone;
+    }
+    return zone.reverse();
 }
 function fixedNumber(number) {
     var newNumber = parseFloat(number.toFixed(floatDecimalNumberFixed));

@@ -23,6 +23,23 @@ type cryptoInfo = {
   prevOpen: number;
 };
 
+type Order = {
+  id: number;
+  hash: string;
+  typ: string;
+  amt: number;
+  rat: number;
+  fee: number;
+  cre: number;
+  rec: number;
+  ts: number;
+};
+
+type responseOrder = {
+  error: number;
+  result: Order;
+};
+
 class BitkubManager {
   private static instance: BitkubManager;
   private API_KEY: string;
@@ -139,7 +156,7 @@ class BitkubManager {
     amoust: number, // THB
     rate: number, // THB/Crypto
     orderType: orderType
-  ): Promise<any> {
+  ): Promise<responseOrder> {
     let body: any = {
       sym: name,
       amt: amoust,
@@ -155,20 +172,6 @@ class BitkubManager {
       headers: this.HEADER,
     });
     return res.data;
-    // {
-    //   error: 0,
-    //   result: {
-    //     id: 8739363,
-    //     hash: 'fwQ6dnQWQQYbeVVNQM2TFuZKibJ',
-    //     typ: 'limit',
-    //     amt: 9.74,
-    //     rat: 31.4,
-    //     fee: 0.03,
-    //     cre: 0.03,
-    //     rec: 0.31,
-    //     ts: 1624112134
-    //   }
-    // }
   }
 
   public async createSell(
@@ -176,7 +179,7 @@ class BitkubManager {
     amoust: number, //Crypto
     rate: number,
     orderType: orderType
-  ): Promise<any> {
+  ): Promise<responseOrder> {
     let body: any = {
       sym: name,
       amt: amoust,
@@ -192,20 +195,6 @@ class BitkubManager {
       headers: this.HEADER,
     });
     return res.data;
-    // {
-    //   error: 0,
-    //   result: {
-    //     id: 48570614,
-    //     hash: 'fwQ6dnQZwudSk1BTNj8K3eiM4jD',
-    //     typ: 'limit',
-    //     amt: 0.002,
-    //     rat: 100000,
-    //     fee: 0.5,
-    //     cre: 0.5,
-    //     rec: 200,
-    //     ts: 1624112869
-    //   }
-    // }
   }
 }
 

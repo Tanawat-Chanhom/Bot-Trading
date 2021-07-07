@@ -1,63 +1,53 @@
 import SocketIOManager from "./services/socketManager";
 import BitkubManager from "./services/bitkubManage";
-import fs from "fs";
 
 /*
  **
- ** Version 2: Variable 461.82
+ ** Version 2: Variable 461.86
  **
  */
 const cryptoName: string = "THB_USDT";
+var circle: number = 0;
+var circleInprogress: boolean = false;
 var currentPrice: number = -1;
 var timeInterval: number = 1000;
 var historyOrder: Object[] = [];
 var floatDecimalNumberFixed: number = 2;
-var isErrorSomewhere: boolean = false;
 var cashFlow: number = 0;
 var logs: log[] = [];
 
 // Zone Setting
-var zones: any = [];
-var maxZone: number = 31.79;
-var minZone: number = 31.73;
+var zones: Zone[] = [];
+var maxZone: number = 32.0;
+var minZone: number = 31.94;
 var amountZone: number = 1; //Zone
 var buyPerZone: number = 20; //THB
 
 // Type
-type zone = {
+type Zone = {
   zoneNumber: number;
   startAt: number;
   endAt: number;
   isBuy: boolean;
-  value: number;
+  cryptoReceived: number;
+  moneySpent: number;
+  moneyReceived: number;
   inOrder: boolean;
   orderType: "BUY" | "SELL" | "";
   order: object;
 };
-
 type logType = "system" | "common" | "error";
-
 interface log {
   text: string;
   timestamp: string;
   logType: logType;
 }
 
+let IO = SocketIOManager.getInstance(cryptoName);
+
 async function init() {
   try {
-    await (async () => {
-      let socket = SocketIOManager.getInstance(cryptoName);
-      socket.on("message", (res: any) => {
-        let data = JSON.parse(res.utf8Data.split("\n")[0]);
-        currentPrice = data.rat;
-      });
-    })()
-      .then(() => {
-        log("Socket Connected!!", "system");
-      })
-      .catch((error) => {
-        log(error, "error");
-      });
+    await socketConnection();
 
     await (async () => {
       if (maxZone !== 0 && minZone !== 0) {
@@ -86,131 +76,51 @@ async function init() {
         log(error, "error");
       });
 
-    if (isErrorSomewhere) {
-      log("Error", "common");
-      return;
-    }
-    setInterval(async () => {
-      zones.map(async (zone: any, index: number) => {
-        buy(zone).then(() => {
-          sell(zone);
-        });
-      });
-    }, timeInterval);
     setInterval(() => {
       console.clear();
-      console.log(`Cash Flow: ${cashFlow} THB`);
-      console.log(`Current Price: ${currentPrice}`);
+      console.log(
+        `Cash Flow: ${cashFlow} THB | Current Price: ${currentPrice} | Circle: ${circle}`
+      );
       displayLogs();
       displayZone();
     }, 1000);
-  } catch (error) {
-    console.error(error);
-  }
-}
 
-function displayLogs() {
-  let beforeSelect = logs.slice(-10);
-  console.log("/".repeat(62));
-  beforeSelect.map((log) => {
-    console.log(
-      "\x1b[40m%s\x1b[0m",
-      "" +
-        `[${log.logType.padEnd(7, " ")}] ${log.text.padEnd(30, " ")} ${
-          log.timestamp
-        } `
-    );
-  });
-  console.log("/".repeat(62));
-}
-
-function displayZone() {
-  zones.reverse().map((zone: any) => {
-    let { zoneNumber, startAt, endAt, isBuy, value, inOrder, orderType } = zone;
-    let arrow = "";
-    // "\x1b[41m%s\x1b[0m" // Red
-    // "\x1b[44m%s\x1b[0m" // Blue
-    // "\x1b[42m%s\x1b[0m" // Green
-    // "\x1b[46m%s\x1b[0m" // Cyan
-    if (currentPrice > startAt && currentPrice < endAt) {
-      arrow = "<--- Current Price";
-    } else {
-      arrow = "";
-    }
-
-    if (inOrder === false && isBuy == false) {
-      console.log(
-        ` Z[${zoneNumber}]: ${startAt.toFixed(2)} - ${endAt.toFixed(
-          2
-        )} ${arrow}`
-      );
-    } else if (inOrder === true) {
-      if (orderType === "BUY") {
-        console.log(
-          "\x1b[42m%s\x1b[0m",
-          "" +
-            ` Z[${zoneNumber}]: ${startAt.toFixed(2)} - ${endAt.toFixed(
-              2
-            )} In Order[BUY] ${arrow}`
-        );
-      } else if (orderType === "SELL") {
-        console.log(
-          "\x1b[41m%s\x1b[0m",
-          "" +
-            ` Z[${zoneNumber}]: ${startAt.toFixed(2)} - ${endAt.toFixed(
-              2
-            )} In Order[SELL] ${arrow}`
-        );
+    let checkingPrice: number = 0;
+    setInterval(async () => {
+      // log(`${checkingPrice} - ${currentPrice}`, "common");
+      if (currentPrice !== checkingPrice && circleInprogress === false) {
+        // Do Something
+        marketCircle();
+        checkingPrice = currentPrice;
+        circle++;
       }
-    } else if (isBuy == true) {
-      console.log(
-        "\x1b[44m%s\x1b[0m",
-        "" +
-          ` Z[${zoneNumber}]: ${startAt.toFixed(2)} - ${endAt.toFixed(
-            2
-          )} In State Value: ${value} ${arrow}`
-      );
-    }
+    }, timeInterval);
+  } catch (error) {
+    log(error + "", "error");
+    console.log("Catch: ", error);
+  }
+}
+
+async function marketCircle(): Promise<void> {
+  let zoneLength = zones.length;
+  let zoneCount = 0;
+
+  circleInprogress = true;
+  zones.map(async (zone: any) => {
+    buy(zone).then(() => {
+      sell(zone).then(() => {
+        zoneCount = zoneCount + 1;
+        if (zoneLength === zoneCount) {
+          circleInprogress = false;
+          log("Circle Done!!", "common");
+        }
+      });
+    });
   });
 }
 
-function generateZone(maxZone: number, minZone: number, amountZone: number) {
-  let diff: number = maxZone - minZone;
-  let lengthPerZone: number = diff / amountZone;
-
-  let zone: zone[] = [
-    {
-      zoneNumber: 0,
-      startAt: minZone,
-      endAt: fixedNumber(minZone + lengthPerZone),
-      isBuy: false,
-      value: 0,
-      inOrder: false,
-      orderType: "",
-      order: {},
-    },
-  ];
-  let test: number = minZone;
-  for (let index = 0; index < amountZone - 1; index++) {
-    let startAt = lengthPerZone + test;
-    let endAt = test + lengthPerZone * 2;
-    zone.push({
-      zoneNumber: index + 1,
-      startAt: fixedNumber(startAt),
-      endAt: fixedNumber(endAt),
-      isBuy: false,
-      value: 0,
-      inOrder: false,
-      orderType: "",
-      order: {},
-    });
-    test = test + lengthPerZone;
-  }
-
-  return zone;
-}
-
-async function buy(zone: any) {
+async function buy(zone: Zone) {
+  // log(`Enter BUY!! - ${zone.zoneNumber}`, "common");
   let wallet = await BitkubManager.getInstance().wallets("THB");
   if (wallet > 20) {
     await checkOrderHistory(zone).then(async () => {
@@ -222,38 +132,53 @@ async function buy(zone: any) {
             newZoneData.inOrder = true;
             newZoneData.order = result;
             newZoneData.orderType = "BUY";
+            newZoneData.moneySpent = result.amt;
+            newZoneData.cryptoReceived = result.rec;
             zones[zone.zoneNumber] = newZoneData;
-            log(`Zone ${zone.zoneNumber} is Order buy`, "common");
+            log(
+              `Zone ${zone.zoneNumber} is Order Buy [${result.amt}฿]`,
+              "common"
+            );
           })
           .catch((error) => {
             log(error, "error");
           });
       }
     });
+    // log(`Out BUY!! - ${zone.zoneNumber}`, "common");
 
     await updateOrderHistory();
   }
 }
 
-async function sell(zone: any) {
+async function sell(zone: Zone) {
+  // log(`Enter SELL!! - ${zone.zoneNumber}`, "common");
   await checkOrderHistory(zone).then(async () => {
     if (zone.isBuy === true) {
       await BitkubManager.getInstance()
-        .createSell(cryptoName, zone.order.rec, zone.endAt, "limit")
+        .createSell(cryptoName, zone.cryptoReceived, zone.endAt, "limit")
         .then(({ result }) => {
+          let cryptoSpent = zone.cryptoReceived;
           let newZoneData = zone;
           newZoneData.inOrder = true;
           newZoneData.isBuy = false;
-          newZoneData.value = 0;
+          newZoneData.cryptoReceived = 0;
           newZoneData.orderType = "SELL";
           newZoneData.order = result;
+          newZoneData.moneyReceived = result.rec;
           zones[zone.zoneNumber] = newZoneData;
-          log(`Zone ${zone.zoneNumber} is Order Sell`, "common");
+          log(
+            `Zone ${zone.zoneNumber} is Order Sell [${cryptoSpent} ${
+              cryptoName.split("_")[1]
+            }]`,
+            "common"
+          );
         })
         .catch((err) => {
           log(err, "error");
         });
     }
+    // log(`Out SELL!! - ${zone.zoneNumber}`, "common");
   });
 
   await updateOrderHistory();
@@ -268,19 +193,145 @@ async function checkOrderHistory(zone: any) {
       let newZoneData = zone;
       newZoneData.inOrder = false;
       newZoneData.isBuy = true;
-      newZoneData.value = zone.order.rec;
       zones[zone.zoneNumber] = newZoneData;
     } else if (zone.orderType === "SELL") {
-      cashFlow = cashFlow + (zone.order.rec - buyPerZone);
-      log(zone.order.rec + "", "common");
+      cashFlow =
+        cashFlow +
+        (parseFloat(zone.moneyReceived) - parseFloat(zone.moneySpent));
       let newZoneData = zone;
       newZoneData.inOrder = false;
       newZoneData.isBuy = false;
-      newZoneData.value = 0;
+      newZoneData.cryptoReceived = 0;
+      newZoneData.moneyReceived = 0;
+      newZoneData.moneySpent = 0;
+      newZoneData.orderType = "";
       newZoneData.order = {};
+
       zones[zone.zoneNumber] = newZoneData;
     }
   }
+}
+
+async function socketConnection(): Promise<void> {
+  IO.socket.on("connect", (connection) => {
+    connection.on("message", (res: any) => {
+      let data = JSON.parse(res.utf8Data.split("\n")[0]);
+      currentPrice = data.rat;
+    });
+    connection.on("error", async (res: any) => {
+      log("Socket Error", "error");
+      await IO.reconnect(socketConnection);
+      log("Socket Reconnection", "system");
+    });
+    connection.on("close", async (res: any) => {
+      log("Socket Close", "system");
+      await IO.reconnect(socketConnection);
+      log("Socket Reconnection", "system");
+    });
+  });
+
+  IO.socket.on("connectFailed", async function () {
+    log("Connect Error!!", "error");
+    await IO.reconnect(socketConnection);
+    log("Socket Reconnection", "system");
+  });
+}
+
+function displayLogs() {
+  let beforeSelect = logs.slice(-15);
+  console.log("/".repeat(65));
+  beforeSelect.map((log) => {
+    console.log(
+      "\x1b[40m%s\x1b[0m",
+      "" +
+        `[${log.logType.padEnd(6, " ")}] ${log.text.padEnd(35, " ")} ${
+          log.timestamp
+        } `
+    );
+  });
+  console.log("/".repeat(65));
+}
+
+function displayZone() {
+  // "\x1b[41m%s\x1b[0m" // Red
+  // "\x1b[44m%s\x1b[0m" // Blue
+  // "\x1b[42m%s\x1b[0m" // Green
+  // "\x1b[46m%s\x1b[0m" // Cyan
+
+  zones.map((zone: Zone) => {
+    let { zoneNumber, startAt, endAt, isBuy, inOrder, orderType } = zone;
+    let arrow = "";
+    let zoneNumberFormatted = zoneNumber.toString().padStart(3, "0");
+    let startAtFormatted = startAt.toFixed(2).toString();
+    let endAtFormatted = endAt.toFixed(2).toString();
+    let zoneRange = `${startAtFormatted} - ${endAtFormatted}`;
+    let zoneRangeFormatted = zoneRange.padEnd(15, " ");
+    let zoneStatus = "";
+    let zoneColor = "46";
+
+    if (currentPrice > startAt && currentPrice < endAt) {
+      arrow = "<--- Current Price";
+    } else {
+      arrow = "";
+    }
+
+    if (inOrder === false && isBuy == false) {
+      zoneStatus = "";
+    } else if (inOrder === true) {
+      if (orderType === "BUY") {
+        zoneStatus = "In Order[BUY]";
+        zoneColor = "42";
+      } else if (orderType === "SELL") {
+        zoneStatus = "In Order[SELL]";
+        zoneColor = "41";
+      }
+    }
+
+    console.log(
+      `\x1b[${zoneColor}m%s\x1b[0m`,
+      `Z[${zoneNumberFormatted}]: ${zoneRangeFormatted} ${zoneStatus} ${arrow}`
+    );
+  });
+}
+
+function generateZone(maxZone: number, minZone: number, amountZone: number) {
+  let diff: number = maxZone - minZone;
+  let lengthPerZone: number = diff / amountZone;
+
+  let zone: Zone[] = [
+    {
+      zoneNumber: 0,
+      startAt: minZone,
+      endAt: fixedNumber(minZone + lengthPerZone),
+      isBuy: false,
+      cryptoReceived: 0,
+      moneySpent: 0,
+      moneyReceived: 0,
+      inOrder: false,
+      orderType: "",
+      order: {},
+    },
+  ];
+  let test: number = minZone;
+  for (let index = 0; index < amountZone - 1; index++) {
+    let startAt = lengthPerZone + test;
+    let endAt = test + lengthPerZone * 2;
+    zone.push({
+      zoneNumber: index + 1,
+      startAt: fixedNumber(startAt),
+      endAt: fixedNumber(endAt),
+      isBuy: false,
+      cryptoReceived: 0,
+      moneySpent: 0,
+      moneyReceived: 0,
+      inOrder: false,
+      orderType: "",
+      order: {},
+    });
+    test = test + lengthPerZone;
+  }
+
+  return zone.reverse();
 }
 
 function fixedNumber(number: number): number {
