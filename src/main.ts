@@ -18,9 +18,9 @@ var logs: log[] = [];
 
 // Zone Setting
 var zones: Zone[] = [];
-var maxZone: number = 32.0;
-var minZone: number = 31.94;
-var amountZone: number = 1; //Zone
+var maxZone: number = 35.0;
+var minZone: number = 30.0;
+var amountZone: number = 5; //Zone
 var buyPerZone: number = 20; //THB
 
 // Type
@@ -106,20 +106,18 @@ async function marketCircle(): Promise<void> {
 
   circleInprogress = true;
   zones.map(async (zone: any) => {
-    buy(zone).then(() => {
-      sell(zone).then(() => {
-        zoneCount = zoneCount + 1;
-        if (zoneLength === zoneCount) {
-          circleInprogress = false;
-          log("Circle Done!!", "common");
-        }
-      });
+  buy(zone).then(() => {
+    sell(zone).then(() => {
+      zoneCount = zoneCount + 1;
+      if (zoneLength === zoneCount) {
+        circleInprogress = false;
+      }
     });
+  });
   });
 }
 
 async function buy(zone: Zone) {
-  // log(`Enter BUY!! - ${zone.zoneNumber}`, "common");
   let wallet = await BitkubManager.getInstance().wallets("THB");
   if (wallet > 20) {
     await checkOrderHistory(zone).then(async () => {
@@ -127,13 +125,11 @@ async function buy(zone: Zone) {
         await BitkubManager.getInstance()
           .createBuy(cryptoName, buyPerZone, zone.startAt, "limit")
           .then(({ result }) => {
-            let newZoneData = zone;
-            newZoneData.inOrder = true;
-            newZoneData.order = result;
-            newZoneData.orderType = "BUY";
-            newZoneData.moneySpent = result.amt;
-            newZoneData.cryptoReceived = result.rec;
-            zones[zone.zoneNumber] = newZoneData;
+            zone.inOrder = true;
+            zone.order = result;
+            zone.orderType = "BUY";
+            zone.moneySpent = result.amt;
+            zone.cryptoReceived = result.rec;
             log(
               `Zone ${zone.zoneNumber} is Order Buy [${result.amt}฿]`,
               "common"
@@ -144,28 +140,23 @@ async function buy(zone: Zone) {
           });
       }
     });
-    // log(`Out BUY!! - ${zone.zoneNumber}`, "common");
-
     await updateOrderHistory();
   }
 }
 
 async function sell(zone: Zone) {
-  // log(`Enter SELL!! - ${zone.zoneNumber}`, "common");
   await checkOrderHistory(zone).then(async () => {
     if (zone.isBuy === true) {
       await BitkubManager.getInstance()
         .createSell(cryptoName, zone.cryptoReceived, zone.endAt, "limit")
         .then(({ result }) => {
           let cryptoSpent = zone.cryptoReceived;
-          let newZoneData = zone;
-          newZoneData.inOrder = true;
-          newZoneData.isBuy = false;
-          newZoneData.cryptoReceived = 0;
-          newZoneData.orderType = "SELL";
-          newZoneData.order = result;
-          newZoneData.moneyReceived = result.rec;
-          zones[zone.zoneNumber] = newZoneData;
+          zone.inOrder = true;
+          zone.isBuy = false;
+          zone.cryptoReceived = 0;
+          zone.orderType = "SELL";
+          zone.order = result;
+          zone.moneyReceived = result.rec;
           log(
             `Zone ${zone.zoneNumber} is Order Sell [${cryptoSpent} ${
               cryptoName.split("_")[1]
@@ -177,7 +168,6 @@ async function sell(zone: Zone) {
           log(err, "error");
         });
     }
-    // log(`Out SELL!! - ${zone.zoneNumber}`, "common");
   });
 
   await updateOrderHistory();
@@ -254,7 +244,6 @@ function displayZone() {
   // "\x1b[44m%s\x1b[0m" // Blue
   // "\x1b[42m%s\x1b[0m" // Green
   // "\x1b[46m%s\x1b[0m" // Cyan
-
   zones.map((zone: Zone) => {
     let { zoneNumber, startAt, endAt, isBuy, inOrder, orderType } = zone;
     let arrow = "";
