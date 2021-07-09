@@ -18,8 +18,8 @@ var logs: log[] = [];
 
 // Zone Setting
 var zones: Zone[] = [];
-var maxZone: number = 35.0;
-var minZone: number = 30.0;
+var maxZone: number = 32.5;
+var minZone: number = 32.4;
 var amountZone: number = 5; //Zone
 var buyPerZone: number = 20; //THB
 
@@ -48,7 +48,9 @@ let IO = SocketIOManager.getInstance(cryptoName);
 
 async function init() {
   try {
-    await socketConnection();
+    await socketConnection().then(() => {
+      log("Socket Connected!!", "system");
+    });
 
     await (async () => {
       if (maxZone !== 0 && minZone !== 0) {
@@ -106,14 +108,14 @@ async function marketCircle(): Promise<void> {
 
   circleInprogress = true;
   zones.map(async (zone: any) => {
-  buy(zone).then(() => {
-    sell(zone).then(() => {
-      zoneCount = zoneCount + 1;
-      if (zoneLength === zoneCount) {
-        circleInprogress = false;
-      }
+    await buy(zone).then(() => {
+      sell(zone).then(() => {
+        zoneCount = zoneCount + 1;
+        if (zoneLength === zoneCount) {
+          circleInprogress = false;
+        }
+      });
     });
-  });
   });
 }
 
@@ -179,22 +181,17 @@ async function checkOrderHistory(zone: Zone) {
       return;
     }
     if (zone.orderType === "BUY") {
-      let newZoneData = zone;
-      newZoneData.inOrder = false;
-      newZoneData.isBuy = true;
-      zones[zone.zoneNumber] = newZoneData;
+      zone.inOrder = false;
+      zone.isBuy = true;
     } else if (zone.orderType === "SELL") {
       cashFlow = cashFlow + (zone.moneyReceived - zone.moneySpent);
-      let newZoneData = zone;
-      newZoneData.inOrder = false;
-      newZoneData.isBuy = false;
-      newZoneData.cryptoReceived = 0;
-      newZoneData.moneyReceived = 0;
-      newZoneData.moneySpent = 0;
-      newZoneData.orderType = "";
-      newZoneData.order = OrderInit;
-
-      zones[zone.zoneNumber] = newZoneData;
+      zone.inOrder = false;
+      zone.isBuy = false;
+      zone.cryptoReceived = 0;
+      zone.moneyReceived = 0;
+      zone.moneySpent = 0;
+      zone.orderType = "";
+      zone.order = OrderInit;
     }
   }
 }
